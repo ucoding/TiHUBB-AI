@@ -1,6 +1,66 @@
-// server/wp-client.js
-
 import fetch from 'node-fetch';
+
+/**
+ * 内部辅助函数：确保 Taxonomy 中的 Term 存在，并返回其 ID
+ */
+async function ensureTerms(baseUrl, auth, taxonomy, names) {
+  if (!names || !names.length) return [];
+  
+  const termIds = [];
+  for (const name of names) {
+    if (!name) continue;
+    const trimmedName = name.trim();
+
+    try {
+      // 1. 尝试查找
+      const searchRes = await fetch(
+        `${baseUrl}/wp/v2/${taxonomy}?search=${encodeURIComponent(trimmedName)}`,
+        { headers: { Authorization: `Basic ${auth}` } }
+      );
+      const existing = await searchRes.json();
+      const match = Array.isArray(existing) ? existing.find(t => t.name === trimmedName) : null;
+
+      if (match) {
+        termIds.push(match.id);
+        continue;
+      }
+
+      // 2. 尝试创建
+      console.log(`[WP] 正在尝试创建新分类: "${trimmedName}"`);
+      const createRes = await fetch(`${baseUrl}/wp/v2/${taxonomy}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name: trimmedName })
+      });
+
+      const result = await createRes.json();
+
+      if (createRes.ok && result.id) {
+        console.log(`[WP] 创建成功: ID ${result.id}`);
+        termIds.push(result.id);
+      } else {
+        // --- 这里是关键：打印 WP 返回的错误信息 ---
+        console.error(`[WP 创建失败详情]:`, {
+          name: trimmedName,
+          status: createRes.status,
+          code: result.code, // 比如 'rest_cannot_create'
+          message: result.message
+        });
+        
+        // 如果是因为已存在但刚才没搜到，尝试从结果拿 ID
+        if (result.code === 'term_exists') {
+          termIds.push(result.data.term_id);
+        }
+      }
+    } catch (err) {
+      console.error(`[网络请求错误]: ${trimmedName}`, err.message);
+    }
+  }
+  return [...new Set(termIds)];
+}
 
 /**
  * 推送 Brief 到 WordPress
@@ -10,7 +70,8 @@ export async function pushBriefToWP({
   excerpt,
   content,
   status = 'draft',
-  fields = {}
+  acf = {},
+  keywords = [] // 修复：必须在此接收 keywords 参数
 }) {
   const {
     WP_API_BASE,
@@ -22,19 +83,26 @@ export async function pushBriefToWP({
     throw new Error('WordPress API credentials are not fully configured.');
   }
 
-  const auth = Buffer.from(
-    `${WP_USERNAME}:${WP_APP_PASSWORD}`
-  ).toString('base64');
+  const auth = Buffer.from(`${WP_USERNAME}:${WP_APP_PASSWORD}`).toString('base64');
+  const baseUrl = WP_API_BASE.replace(/\/$/, '');
 
+  // 1. 处理分类法逻辑
+  const categoryIds = await ensureTerms(baseUrl, auth, 'brief-category', keywords);
+  console.log('获取到的分类 IDs:', categoryIds); // 调试用
+
+  // 2. 构造 Payload
   const payload = {
     title,
     excerpt,
     content,
     status,
-    ...(Object.keys(fields).length ? { fields } : {})
+    // 将获取到的 ID 数组绑定到自定义分类法字段
+    'brief-category': categoryIds, 
+    ...(Object.keys(acf).length ? { acf } : {})
   };
 
-  const res = await fetch(`${WP_API_BASE}/wp/v2/brief`, {
+  // 3. 执行推送
+  const res = await fetch(`${baseUrl}/wp/v2/brief`, {
     method: 'POST',
     headers: {
       Authorization: `Basic ${auth}`,
@@ -59,4 +127,3 @@ export async function pushBriefToWP({
     status: data.status
   };
 }
-

@@ -19,6 +19,6 @@
   },
   "model": "gemma3:12b",
   "prompt": "brief.{platform}.md",
-  "output": "markdown",
+  "outputType": "markdown",
   "temperature": 0.7
 }

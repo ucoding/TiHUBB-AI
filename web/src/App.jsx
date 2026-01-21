@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { marked } from 'marked';
 import { 
   SparklesIcon, 
   ChatBubbleLeftRightIcon,
@@ -17,6 +18,7 @@ export default function App() {
   const [platform, setPlatform] = useState('zhihu');
   const [result, setResult] = useState('');
   const [aiResult, setAiResult] = useState(null);
+  const [keywords, setKeywords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const contentRef = useRef(null);
@@ -100,33 +102,51 @@ export default function App() {
 
   async function runTool() {
     setLoading(true);
-    setResult('');
     setError(null);
 
+    // --- 开始新任务时，复位所有旧状态 ---
+    setResult('');         // 清空 Markdown 内容
+    setKeywords([]);       // 清空旧关键词
+    setPublishResult(null); // 清空旧推送成功的链接
+    setAiResult(null);     // 清空发送给后端的数据对象
+    // ------------------------------------------
+
     try {
-      const res = await fetch('http://localhost:3000/api/run', {
+      const res = await fetch(`${API_BASE}/api/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tool: 'brief', inputs: { question, platform } }),
       });
 
       const data = await res.json();
-      if (res.ok && typeof data.output === 'string') {
-        const briefMarkdown = data.output.trim();
-        const briefText = stripMarkdown(briefMarkdown); // 去掉 Markdown
+      // 从 data.output.result 中提取真正的 Markdown 文本
+      const actualOutput = data.output?.result || '';
 
+      if (res.ok && actualOutput) {
+        const briefMarkdown = actualOutput.trim();
+        const briefText = stripMarkdown(briefMarkdown); 
+        const briefHtml = marked.parse(briefMarkdown);
+        const finalKeywords = data.output?.keywords || [];
+        
         setResult(briefMarkdown);
+        
+        setKeywords(finalKeywords); // 如果后端有 keywords 字段则设置，否则给空数组
+
         setAiResult({
+          platform,
           platformLabel: platformConfigs.find(p => p.id === platform)?.label || platform.toUpperCase(),
           question,
-          brief: briefText,
+          brief: briefHtml, // 将 MD 转为 HTML 字符串发送
           summary: briefText.slice(0, 120),
+          keywords: finalKeywords,
           status: 'publish', 
         });
       } else {
-        setError(data.error || '后端返回了错误');
+        // 如果后端确实报错了，依然显示错误
+        setError(data.error || '后端返回数据格式不正确');
       }
     } catch (e) {
+      console.error('请求过程崩溃:', e);
       setError('网络连接失败，请检查后端服务是否启动');
     } finally {
       setLoading(false);
@@ -162,6 +182,13 @@ export default function App() {
       alert('请先生成内容');
       return;
     }
+
+    if (!aiResult.keywords || aiResult.keywords.length === 0) {
+      // 如果这里弹窗了，说明是生成阶段或状态保存阶段出了问题
+      const confirm = window.confirm('检测到关键词为空，确定要发布吗？');
+      if (!confirm) return;
+    }
+
     setPublishing(true);
     setPublishResult(null);
 
@@ -186,7 +213,7 @@ export default function App() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-4">
+    <div className="max-w-6xl mx-auto p-6 space-y-4">
       {/* Header */}
       <div className="text-center space-y-2">
         <div className="inline-flex items-center justify-center p-3 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-200 mb-2">
@@ -307,34 +334,89 @@ export default function App() {
             )}
           </div>
 
-          {/* Publish Brief */}
-          <button
-            onClick={handlePublish}
-            disabled={publishing}
-            className="mt-4 px-4 py-2 rounded-lg bg-green-600 text-white disabled:opacity-50"
-          >
-            {publishing ? '推送中...' : '推送到 WordPress'}
-          </button>
-          {publishResult && (
-            <div className="mt-2 text-sm text-green-700">
-              已推送成功：
-              <a
-                href={publishResult.link}
-                target="_blank"
-                className="underline ml-1"
-              >
-                查看草稿
-              </a>
+          {keywords.length > 0 && (
+            <div className="mt-4">
+              <div className="text-sm font-medium text-slate-700 mb-2">
+                AI 建议关键词（可选）
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {keywords.map((kw, idx) => (
+                  <label
+                    key={idx}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 cursor-pointer text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      defaultChecked
+                      onChange={(e) => {
+                        setAiResult(prev => {
+                          if (!prev) return prev;
+                          const nextKeywords = e.target.checked
+                            ? [...new Set([...(prev.keywords || []), kw])]
+                            : (prev.keywords || []).filter(k => k !== kw);
+
+                          return {
+                            ...prev,
+                            keywords: nextKeywords,
+                          };
+                        });
+                      }}
+                    />
+                    <span>{kw}</span>
+                  </label>
+                ))}
+              </div>
             </div>
           )}
 
+          
 
-          {/* Character count or extra info could go here */}
+          {/* 发布按钮与成功反馈整合区域 */}
           {result && (
-            <div className="mt-4 flex justify-end">
-              <span className="text-xs text-slate-400">
-                {result.length} 字
-              </span>
+            <div className="mt-4 border-t border-slate-100 pt-4">
+              <button
+                onClick={handlePublish}
+                disabled={loading || publishing || !!publishResult}
+                className={`w-full px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center
+                  ${(loading || publishing || !!publishResult)
+                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700 text-white shadow-md active:scale-95'
+                  }`}
+              >
+                {publishing ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    推送中...
+                  </>
+                ) : publishResult ? (
+                  '✓ 已成功推送至 WordPress'
+                ) : (
+                  '推送到 WordPress'
+                )}
+              </button>
+
+              {/* 成功后的查看链接卡片 */}
+              {publishResult && (
+                <div className="mt-3 p-3 bg-green-50 border border-green-100 rounded-lg flex items-center justify-between animate-in fade-in slide-in-from-bottom-2">
+                  <span className="text-sm text-green-700 font-medium">文章草稿已准备就绪</span>
+                  <a
+                    href={publishResult.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm bg-white px-3 py-1 rounded shadow-sm text-green-600 hover:text-green-700 border border-green-200 transition-colors"
+                  >
+                    去查看
+                  </a>
+                </div>
+              )}
+              
+              {/* 字数统计 */}
+              <div className="mt-2 flex justify-end">
+                <span className="text-xs text-slate-400">{result.length} 字</span>
+              </div>
             </div>
           )}
         </div>  

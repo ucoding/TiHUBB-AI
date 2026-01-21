@@ -1,0 +1,18 @@
+{
+  "id": "brief.keywords",
+  "outputType": "json",
+  "name": "Brief Keyword Extractor",
+  "model": "gemma3:12b",
+  "temperature": 0.2,
+  "prompt": "brief.keywords.md",
+  "inputs": {
+    "question": {
+      "type": "string",
+      "required": true
+    },
+    "file": {
+      "type": "string",
+      "required": true
+    }
+  }
+}
