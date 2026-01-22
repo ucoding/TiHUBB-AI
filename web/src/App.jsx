@@ -154,6 +154,12 @@ export default function App() {
   }
 
   const platformConfigs = [
+    { id: 'zhihu', label: '知乎', icon: '知' },
+    { id: 'x', label: ' X.com ', icon: '𝕏' },
+    { id: 'xhs', label: '小红书', icon: '📕' },
+  ];
+  /*
+  const platformConfigs = [
     {
       id: 'zhihu',
       label: '知乎',
@@ -172,7 +178,7 @@ export default function App() {
       active: 'bg-red-500 text-white',
       inactive: 'bg-gray-200 text-gray-700 hover:bg-gray-300',
     },
-  ];
+  ];*/
 
   const [publishing, setPublishing] = useState(false);
   const [publishResult, setPublishResult] = useState(null);
@@ -240,46 +246,88 @@ export default function App() {
             className="w-full flex-1 p-4 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-1 focus:ring-indigo-500 focus:border-transparent transition-all resize-none text-slate-700 placeholder:text-slate-400 text-base leading-relaxed mb-6"
           />
           <div className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              {platformConfigs.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => setPlatform(p.id)}
-                  className={`px-4 py-2 rounded font-medium transition-all duration-200 ${
-                    platform === p.id
-                      ? `${p.active} shadow-md scale-105`
-                      : `${p.inactive}`
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
+
+            {/* 平台选择区域 */}
+            <div className="space-y-3 mb-6">
+              <div className="flex items-center justify-between px-1">
+                <label className="text-sm font-bold text-slate-700">发布平台</label>
+                <span className="text-[10px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full font-medium">
+                  已选: {platformConfigs.find(p => p.id === platform)?.label}
+                </span>
+              </div>
+
+              <div className="bg-slate-100/80 p-1 rounded-xl flex flex-wrap gap-1">
+                {platformConfigs.map((p) => {
+                  const isSelected = platform === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setPlatform(p.id)}
+                      disabled={loading || publishing}
+                      className={`
+                        flex-1 min-w-[80px] px-3 py-2 rounded-lg text-sm font-bold transition-all duration-200
+                        ${isSelected 
+                          ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200' 
+                          : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                        }
+                        ${(loading || publishing) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                      `}
+                    >
+                      <span className="flex items-center justify-center gap-1.5">
+                        {/* 动态显示图标或文字首字母 */}
+                        <span className="text-base">
+                          {p.id === 'zhihu' ? '知' : p.id === 'xhs' ? '📕' : p.id === 'x' ? '𝕏' : 'R'}
+                        </span>
+                        {p.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="text-xs text-slate-400 mb-1 text-end">AI 将根据平台属性调整语气</div>
             </div>
 
+            {/* 生成按钮 */}
             <button
               onClick={runTool}
-              disabled={loading}
-              className={`w-full py-3.5 px-6 rounded-xl text-white font-semibold text-lg shadow-lg transition-all duration-200 flex items-center justify-center space-x-2
+              disabled={loading || !question.trim()}
+              className={`
+                relative w-full py-4 px-6 rounded-2xl font-bold text-lg transition-all duration-300 overflow-hidden
+                flex items-center justify-center gap-3
                 ${loading || !question.trim() 
-                  ? 'bg-slate-300 cursor-not-allowed shadow-none' 
-                  : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-indigo-200 hover:-translate-y-0.5 active:translate-y-0'
-                }`}
+                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
+                  : 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-0.5 active:translate-y-0'
+                }
+              `}
             >
+              {/* 1. 背景流光效果：仅在 Loading 时显示 */}
+              {loading && (
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
+              )}
+
               {loading ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    生成中...
-                  </>
-                ) : (
-                  <>
-                    <SparklesIcon className="h-5 w-5" />
-                    <span>立即生成</span>
-                  </>
-                )}
+                <>
+                  {/* 2. 呼吸灯加载图标 */}
+                  <div className="relative flex h-5 w-5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-5 w-5 bg-white/20 items-center justify-center">
+                      <svg className="animate-spin h-3 w-3 text-white" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    </span>
+                  </div>
+                  <span className="tracking-widest">AI 思考中...</span>
+                </>
+              ) : (
+                <>
+                  <SparklesIcon className={`h-6 w-6 transition-transform ${question.trim() ? 'animate-pulse' : ''}`} />
+                  <span>开始生成简报</span>
+                </>
+              )}
             </button>
+            
           </div>
         </div>
         
