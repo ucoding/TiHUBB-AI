@@ -2,7 +2,12 @@
   "id": "brief.keywords",
   "outputType": "json",
   "name": "Brief Keyword Extractor",
-  "model": "gemma3:12b",
+  "defaultProvider": "gemini",
+  "models": {
+    "ollama": "gemma3:12b",
+    "gemini": "gemini-3-flash-preview",
+    "deepseek": "deepseek-chat"
+  },
   "temperature": 0.2,
   "prompt": "brief.keywords.md",
   "inputs": {

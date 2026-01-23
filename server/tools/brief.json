@@ -17,7 +17,12 @@
       "required": false
     }
   },
-  "model": "gemma3:12b",
+  "defaultProvider": "gemini",
+  "models": {
+    "ollama": "gemma3:12b",
+    "gemini": "gemini-3-flash-preview",
+    "deepseek": "deepseek-chat"
+  },
   "prompt": "brief.{platform}.md",
   "outputType": "markdown",
   "temperature": 0.7

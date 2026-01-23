@@ -7,13 +7,16 @@ import {
   SparklesIcon, 
   ChatBubbleLeftRightIcon,
   ClipboardDocumentIcon, 
-  ClipboardDocumentCheckIcon
+  ClipboardDocumentCheckIcon,
+  CpuChipIcon,
+  GlobeAltIcon
 } from '@heroicons/react/24/outline';
 
 // 从环境变量读取 API 基础 URL
 const API_BASE = import.meta.env.VITE_API_BASE;
 
 export default function App() {
+  const [aiProvider, setAiProvider] = useState('ollama'); // 默认本地
   const [question, setQuestion] = useState('');
   const [platform, setPlatform] = useState('zhihu');
   const [result, setResult] = useState('');
@@ -23,6 +26,22 @@ export default function App() {
   const [error, setError] = useState('');
   const contentRef = useRef(null);
   const [copied, setCopied] = useState(false);
+
+  const modelConfigs = [
+    { id: 'ollama', label: '本地 Ollama', sub: 'Gemma3:12b (较快)', icon: <CpuChipIcon className="h-4 w-4" /> },
+    { id: 'gemini', label: 'Google Gemini', sub: 'Gemini-3-flash (限额/快)', icon: <SparklesIcon className="h-4 w-4" /> },
+  ];
+
+  const formatModelName = (name) => {
+    if (!name) return '未知模型';
+    // 统一转成小写判断更稳
+    const lowName = name.toLowerCase();
+    if (lowName.includes('gemini-3')) return '⚡️ Gemini 3 (Thinking)';
+    if (lowName.includes('gemini-2')) return '⚖️ Gemini 2.x (Stable)';
+    if (lowName.includes('gemini-1.5')) return '📜 Gemini 1.5 (Legacy)';
+    if (lowName.includes('gemma') || lowName.includes('ollama')) return '🏠 Local Gemma (Ollama)';
+    return name;
+  };
 
   function stripMarkdown(md) {
     return md
@@ -115,7 +134,16 @@ export default function App() {
       const res = await fetch(`${API_BASE}/api/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tool: 'brief', inputs: { question, platform } }),
+        // body: JSON.stringify({ tool: 'brief', inputs: { question, platform } }),
+        body: JSON.stringify({ 
+          tool: 'brief', 
+          inputs: { 
+            question, 
+            platform,
+            // 关键：将用户选择的 provider 传给后端
+            provider: aiProvider 
+          } 
+        }),
       });
 
       const data = await res.json();
@@ -127,6 +155,7 @@ export default function App() {
         const briefText = stripMarkdown(briefMarkdown); 
         const briefHtml = marked.parse(briefMarkdown);
         const finalKeywords = data.output?.keywords || [];
+        const actualModel = data.output.actualModel; // 从后端获取实际使用的模型名称
         
         setResult(briefMarkdown);
         
@@ -140,6 +169,7 @@ export default function App() {
           summary: briefText.slice(0, 120),
           keywords: finalKeywords,
           status: 'publish', 
+          actualModel: actualModel 
         });
       } else {
         // 如果后端确实报错了，依然显示错误
@@ -158,27 +188,6 @@ export default function App() {
     { id: 'x', label: ' X.com ', icon: '𝕏' },
     { id: 'xhs', label: '小红书', icon: '📕' },
   ];
-  /*
-  const platformConfigs = [
-    {
-      id: 'zhihu',
-      label: '知乎',
-      active: 'bg-blue-600 text-white',
-      inactive: 'bg-gray-200 text-gray-700 hover:bg-gray-300',
-    },
-    {
-      id: 'x',
-      label: 'X / Twitter',
-      active: 'bg-blue-400 text-white',
-      inactive: 'bg-gray-200 text-gray-700 hover:bg-gray-300',
-    },
-    {
-      id: 'xhs',
-      label: '小红书',
-      active: 'bg-red-500 text-white',
-      inactive: 'bg-gray-200 text-gray-700 hover:bg-gray-300',
-    },
-  ];*/
 
   const [publishing, setPublishing] = useState(false);
   const [publishResult, setPublishResult] = useState(null);
@@ -246,6 +255,37 @@ export default function App() {
             className="w-full flex-1 p-4 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-1 focus:ring-indigo-500 focus:border-transparent transition-all resize-none text-slate-700 placeholder:text-slate-400 text-base leading-relaxed mb-6"
           />
           <div className="space-y-4">
+
+            {/* 模型选择区域 */}
+            <div className="space-y-3 mb-4">
+              <label className="text-sm font-bold text-slate-700 px-1">推理引擎</label>
+              <div className="grid grid-cols-2 gap-2">
+                {modelConfigs.map((m) => {
+                  const isSelected = aiProvider === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => setAiProvider(m.id)}
+                      className={`
+                        flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 text-left
+                        ${isSelected 
+                          ? 'border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600' 
+                          : 'border-slate-200 hover:border-slate-300 bg-white'
+                        }
+                      `}
+                    >
+                      <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                        {m.icon}
+                      </div>
+                      <div>
+                        <div className={`text-sm font-bold ${isSelected ? 'text-indigo-900' : 'text-slate-700'}`}>{m.label}</div>
+                        <div className="text-[10px] text-slate-400">{m.sub}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
             {/* 平台选择区域 */}
             <div className="space-y-3 mb-6">
@@ -461,10 +501,37 @@ export default function App() {
                 </div>
               )}
               
-              {/* 字数统计 */}
-              <div className="mt-2 flex justify-end">
-                <span className="text-xs text-slate-400">{result.length} 字</span>
-              </div>
+              {/* 模型信息与字数统计 */}
+{aiResult && (
+  <div className="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center">
+    <div className="flex items-center gap-1.5">
+      {/* 使用 aiResult.actualModel */}
+      <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${
+        aiResult.actualModel?.toLowerCase().includes('gemini')
+          ? 'bg-indigo-50 text-indigo-700 ring-indigo-700/10'
+          : 'bg-emerald-50 text-emerald-700 ring-emerald-700/10'
+      }`}>
+        {formatModelName(aiResult.actualModel)}
+      </span>
+
+      {/* 顶尖模型标志 */}
+      {aiResult.actualModel?.toLowerCase().includes('gemini-3') && (
+        <span className="flex items-center">
+          <span className="relative flex h-2 w-2 mr-1">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+          </span>
+          <span className="text-[10px] text-amber-600 font-bold tracking-tighter">PREVIEW</span>
+        </span>
+      )}
+    </div>
+
+    {/* 字数统计：直接读取已存储的 result 字符串长度 */}
+    <div className="text-xs text-slate-400 tabular-nums">
+      {result?.length || 0} <span className="opacity-70">字</span>
+    </div>
+  </div>
+)}
             </div>
           )}
         </div>  
