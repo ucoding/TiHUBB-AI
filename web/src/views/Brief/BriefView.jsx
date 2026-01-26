@@ -235,7 +235,7 @@ export default function App() {
           <SparklesIcon className="h-8 w-8 text-white" />
         </div>
         <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-          TiHUBB 内容简报生成器
+          TiHUBB 社媒简报生成器
         </h1>
         <p className="text-lg text-slate-500">
           拒绝废话，一键生成高质量、有观点的社交媒体短文。

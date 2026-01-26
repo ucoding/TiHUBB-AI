@@ -80,7 +80,8 @@ const ChatView = () => {
   const textareaRef = useRef(null);
 
   const handleSend = async (overrideContent = null, overrideHistory = null) => {
-    const textToSend = overrideContent || input;
+    let textToSend = (typeof overrideContent === 'string') ? overrideContent : input;
+    textToSend = String(textToSend || "");
     if (!textToSend.trim() || isLoading) return;
 
     // 构造带 Skill 的 System Prompt
@@ -268,7 +269,7 @@ const ChatView = () => {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] bg-white">
+    <div className="flex flex-col h-[calc(100vh-64px)] bg-white shadow">
 
       {/* 视图内部头部 - Sticky Header */}
       <header className="shrink-0 h-14 border-b bg-white/80 backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-10">
@@ -404,7 +405,7 @@ const ChatView = () => {
             
             {/* 发送按钮 */}
             <button 
-              onClick={handleSend}
+              onClick={() => handleSend()}
               disabled={isLoading || !input.trim()}
               className="shrink-0 bg-gray-900 hover:bg-black text-white px-5 py-2.5 rounded-xl disabled:bg-gray-200 disabled:cursor-not-allowed transition-all shadow-sm font-medium"
             >
