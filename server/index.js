@@ -5,7 +5,8 @@ dotenv.config({ path: './.env.local' }); // 加载本地环境变量
 import express from 'express';
 import { runTool } from './tool-runner.js';
 import cors from "cors";
-import { publishBrief } from './brief-publisher.js';
+import { publishBrief } from './brief-publisher.js'; // 引入简报发布模块
+import { publishArticle } from './article-publisher.js'; // 引入文章发布模块
 import multer from 'multer';
 import fs from 'fs/promises';
 
@@ -88,6 +89,21 @@ app.post('/api/publish-brief', async (req, res) => {
     res.json({ success: true, result });
   } catch (err) {
     console.error(err);
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+});
+
+// 发布长文接口：支持 Markdown 转换和结构化入库
+app.post('/api/publish-article', async (req, res) => {
+  try {
+    // req.body 包含: { title, content, excerpt, status }
+    const result = await publishArticle(req.body);
+    res.json({ success: true, result });
+  } catch (err) {
+    console.error('[Article Publish Error]:', err);
     res.status(500).json({
       success: false,
       message: err.message

@@ -1,0 +1,31 @@
+{
+  "id": "article_section",
+  "name": "长文章节内容扩写器",
+  "description": "根据大纲章节和上下文，生成去AI味的深度正文内容",
+  "inputs": {
+    "question": {
+      "type": "string",
+      "required": true,
+      "description": "当前章节标题"
+    },
+    "context": {
+      "type": "string",
+      "required": false,
+      "description": "上文内容摘要或全文，保持连贯性"
+    },
+    "requirements": {
+      "type": "string",
+      "required": false,
+      "description": "本章节必须包含的关键词或核心点"
+    }
+  },
+  "defaultProvider": "gemini",
+  "models": {
+    "ollama": "gemma3:12b",
+    "gemini": "gemini-3-flash-preview",
+    "deepseek": "deepseek-chat"
+  },
+  "prompt": "article/content.md",
+  "outputType": "markdown",
+  "temperature": 0.6
+}

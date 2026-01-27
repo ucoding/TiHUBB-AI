@@ -23,7 +23,7 @@
     "gemini": "gemini-3-flash-preview",
     "deepseek": "deepseek-chat"
   },
-  "prompt": "brief.{platform}.md",
+  "prompt": "brief/brief.{platform}.md",
   "outputType": "markdown",
   "temperature": 0.7
 }

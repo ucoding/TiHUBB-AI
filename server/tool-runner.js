@@ -7,11 +7,12 @@ import { fileURLToPath } from 'url';
 import { createProvider } from './providers/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = __dirname;
+const SERVER_ROOT = __dirname;
 
 export async function runTool(toolId, inputs) {
   // --- 1. 读取 Tool 定义 ---
-  const toolPath = path.join(ROOT, 'tools', `${toolId}.json`);
+  const toolPath = path.join(SERVER_ROOT, 'tools', `${toolId}.json`);
+
   if (!fs.existsSync(toolPath)) {
     throw new Error(`Tool not found: ${toolId}`);
   }
@@ -31,11 +32,11 @@ export async function runTool(toolId, inputs) {
     promptFile = promptFile.replace(`{${key}}`, inputs[key]);
   }
 
-  const promptPath = path.join(ROOT, 'prompts', promptFile);
+  const promptPath = path.join(SERVER_ROOT, 'prompts', promptFile);
   if (!fs.existsSync(promptPath)) {
     throw new Error(`Prompt file not found: ${promptFile}`);
   }
-  const systemPrompt = fs.readFileSync(promptPath, 'utf-8');
+  const systemPrompt = fs.readFileSync(promptPath, 'utf-8'); // 读取 Prompt 时不使用缓存
 
   // --- 4. 构建消息数组 (适配不同模型) ---
   let userContent = '';
@@ -107,11 +108,57 @@ export async function runTool(toolId, inputs) {
   // --- 7. JSON 解析处理 ---
   if (tool.outputType === 'json') {
     try {
-      const cleanJson = result.replace(/```json|```/g, '').trim();
+      // 1. 兼容性寻找起始点：查找 [ 或 { 哪个先出现
+      const braceIndex = result.indexOf('{');
+      const bracketIndex = result.indexOf('[');
+      
+      let startIndex = -1;
+      if (braceIndex === -1) startIndex = bracketIndex;
+      else if (bracketIndex === -1) startIndex = braceIndex;
+      else startIndex = Math.min(braceIndex, bracketIndex);
+
+      if (startIndex === -1) throw new Error('No JSON start found');
+      
+      let cleanJson = result.substring(startIndex).trim();
+      
+      // 2. 截断修复逻辑优化
+      const lastChar = cleanJson[cleanJson.length - 1];
+      if (lastChar !== '}' && lastChar !== ']') {
+        console.warn('[WP-AI] 检测到 JSON 可能截断，尝试自动修复...');
+        
+        const openBraces = (cleanJson.match(/\{/g) || []).length;
+        const closeBraces = (cleanJson.match(/\}/g) || []).length;
+        const openBrackets = (cleanJson.match(/\[/g) || []).length;
+        const closeBrackets = (cleanJson.match(/\]/g) || []).length;
+
+        // 这里的补全顺序很重要：先闭合引号，再闭合括号
+        // 检查最后一段是否缺少引号（简单处理：如果最后不是符号且引号总数是奇数）
+        const quoteCount = (cleanJson.match(/"/g) || []).length;
+        if (quoteCount % 2 !== 0) cleanJson += '"';
+
+        // 依次补齐
+        cleanJson += ']'.repeat(Math.max(0, openBrackets - closeBrackets));
+        cleanJson += '}'.repeat(Math.max(0, openBraces - closeBraces));
+      }
+
+      // 3. 提取最终有效的 JSON 字符串（匹配最外层对应的闭合符）
+      // 如果是数组开头，匹配到最后一个 ]；如果是对象开头，匹配到最后一个 }
+      const isArray = cleanJson.startsWith('[');
+      const lastValidIndex = isArray ? cleanJson.lastIndexOf(']') : cleanJson.lastIndexOf('}');
+      
+      if (lastValidIndex !== -1) {
+        cleanJson = cleanJson.substring(0, lastValidIndex + 1);
+      }
+
       parsedResult = JSON.parse(cleanJson);
+      
     } catch (e) {
-      console.error('JSON解析失败，原始输出:', result);
-      throw new Error('模型输出格式非标准 JSON，请重试');
+      console.error('JSON 修复亦失败，原始输出:', result);
+      // 降级处理：如果是 Brief 模块（关键词提取），返回空数组而非报错对象
+      parsedResult = Array.isArray(parsedResult) ? [] : {
+        title: "生成不完整",
+        sections: [{ heading: "解析失败", key_points: [result.substring(0, 50) + "..."] }]
+      };
     }
   }
 

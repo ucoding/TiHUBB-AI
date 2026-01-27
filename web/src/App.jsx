@@ -2,6 +2,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './layout/MainLayout';
 import BriefView from './views/Brief/BriefView';
+import ArticleView from './views/Article/ArticleView';
 import ChatView from './views/Chat/ChatView';
 
 // 路由入口
@@ -15,6 +16,8 @@ export default function App() {
           
           {/* 简报业务模块 */}
           <Route path="/brief" element={<BriefView />} />
+
+          <Route path="/article" element={<ArticleView />} />
 
           <Route path="/chat" element={<ChatView />} />
           

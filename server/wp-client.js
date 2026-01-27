@@ -1,4 +1,13 @@
+// server/wp-client.js
+
 import fetch from 'node-fetch';
+import MarkdownIt from 'markdown-it';
+
+const md = new MarkdownIt({
+  html: true,     // 允许原生的 HTML 标签
+  linkify: true,  // 自动转换链接
+  typographer: true
+});
 
 /**
  * 内部辅助函数：确保 Taxonomy 中的 Term 存在，并返回其 ID
@@ -126,4 +135,60 @@ export async function pushBriefToWP({
     link: data.link,
     status: data.status
   };
+}
+
+
+/**
+ * 推送长文到 WordPress
+ */
+export async function pushArticleToWP({
+  title,
+  content,      // Markdown 格式
+  excerpt = '', 
+  status = 'draft',
+  categories = ['AI生成'], // 默认分类
+  tags = [],
+  authorId = 1
+}) {
+  const { WP_API_BASE, WP_USERNAME, WP_APP_PASSWORD } = process.env;
+  const auth = Buffer.from(`${WP_USERNAME}:${WP_APP_PASSWORD}`).toString('base64');
+  const baseUrl = WP_API_BASE.replace(/\/$/, '');
+
+  // 1. 格式转换：将 Markdown 转为 WP 喜欢的结构化 HTML
+  // 你可以给生成的 HTML 包裹一层类名，方便在网站前端做样式隔离
+  const formattedContent = `
+    <div class="ai-generated-article">
+      ${md.render(content)}
+    </div>
+  `;
+
+  // 2. 处理标准分类 (WP 自带的 categories 是 ID 数组)
+  const categoryIds = await ensureTerms(baseUrl, auth, 'categories', categories);
+  const tagIds = await ensureTerms(baseUrl, auth, 'tags', tags);
+
+  // 3. 构造 Payload (针对标准文章 post)
+  const payload = {
+    title,
+    excerpt,
+    content: formattedContent,
+    status,
+    categories: categoryIds,
+    tags: tagIds,
+    author: authorId
+  };
+
+  // 4. 执行推送 (注意：标准文章路径是 /wp/v2/posts)
+  const res = await fetch(`${baseUrl}/wp/v2/posts`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${auth}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.message || 'WP Article push failed');
+
+  return { postId: data.id, link: data.link };
 }

@@ -10,3 +10,11 @@ body {
     transform: translateX(100%);
   }
 }
+
+@keyframes progress-loading {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+.animate-progress-loading {
+  animation: progress-loading 2s infinite linear;
+}

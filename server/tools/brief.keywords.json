@@ -9,7 +9,7 @@
     "deepseek": "deepseek-chat"
   },
   "temperature": 0.2,
-  "prompt": "brief.keywords.md",
+  "prompt": "brief/brief.keywords.md",
   "inputs": {
     "question": {
       "type": "string",

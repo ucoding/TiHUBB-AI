@@ -1,0 +1,21 @@
+{
+  "id": "article_outline",
+  "name": "深度长文大纲策划器",
+  "description": "基于爆文逻辑，将主题转化为结构化的 JSON 大纲，支持人工修改",
+  "inputs": {
+    "question": {
+      "type": "string",
+      "required": true,
+      "description": "文章主题或核心观点"
+    }
+  },
+  "defaultProvider": "gemini",
+  "models": {
+    "ollama": "gemma3:12b",
+    "gemini": "gemini-3-flash-preview",
+    "deepseek": "deepseek-reasoner" 
+  },
+  "prompt": "article/outline.md",
+  "outputType": "json",
+  "temperature": 0.8
+}

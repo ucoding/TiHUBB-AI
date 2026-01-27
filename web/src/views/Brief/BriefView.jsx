@@ -290,7 +290,7 @@ export default function App() {
             {/* 平台选择区域 */}
             <div className="space-y-3 mb-6">
               <div className="flex items-center justify-between px-1">
-                <label className="text-sm font-bold text-slate-700">发布平台</label>
+                <label className="text-sm font-bold text-slate-700">风格平台</label>
                 <span className="text-[10px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full font-medium">
                   已选: {platformConfigs.find(p => p.id === platform)?.label}
                 </span>

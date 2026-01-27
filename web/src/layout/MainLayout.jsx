@@ -13,7 +13,7 @@ const MainLayout = ({ children }) => {
   const menuItems = [
     { name: '聊天会话', path: '/chat', icon: DocumentTextIcon },
     { name: '社媒简报', path: '/brief', icon: DocumentTextIcon },
-    { name: '文章创作', path: '/long-form', icon: PencilSquareIcon },
+    { name: '文章创作', path: '/article', icon: PencilSquareIcon },
     { name: 'AI 生图', path: '/image-gen', icon: PhotoIcon },
     { name: 'Skill 管理', path: '/skills', icon: CommandLineIcon },
   ];
