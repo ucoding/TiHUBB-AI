@@ -1,0 +1,18 @@
+{
+  "id": "brief_seo",
+  "name": "简报 SEO 提取",
+  "description": "从简报内容中提取 SEO 标题、描述和关键词",
+  "inputs": {
+    "question": { "type": "string", "required": true },
+    "file": { "type": "string", "required": true }
+  },
+  "defaultProvider": "gemini",
+  "models": {
+    "ollama": "gemma3:12b",
+    "gemini": "gemini-3-flash-preview",
+    "deepseek": "deepseek-chat"
+  },
+  "prompt": "brief/brief.seo.md", 
+  "outputType": "json",
+  "temperature": 0.3
+}

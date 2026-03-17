@@ -147,6 +147,7 @@ export default function App() {
       });
 
       const data = await res.json();
+      const output = data.output;
       // 从 data.output.result 中提取真正的 Markdown 文本
       const actualOutput = data.output?.result || '';
 
@@ -155,6 +156,11 @@ export default function App() {
         const briefText = stripMarkdown(briefMarkdown); 
         const briefHtml = marked.parse(briefMarkdown);
         const finalKeywords = data.output?.keywords || [];
+        const seoData = output?.seo || { 
+          seo_title: '', 
+          seo_keywords: '', 
+          seo_description: '' 
+        };
         const actualModel = data.output.actualModel; // 从后端获取实际使用的模型名称
         
         setResult(briefMarkdown);
@@ -168,6 +174,7 @@ export default function App() {
           brief: briefHtml, // 将 MD 转为 HTML 字符串发送
           summary: briefText.slice(0, 120),
           keywords: finalKeywords,
+          seo: seoData,
           status: 'publish', 
           actualModel: actualModel 
         });
@@ -453,6 +460,59 @@ export default function App() {
                     <span>{kw}</span>
                   </label>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {aiResult?.seo && (
+            <div className="mt-6 bg-slate-50 p-5 rounded-2xl border border-slate-200 animate-in fade-in slide-in-from-top-4">
+              <div className="flex items-center gap-2 mb-4 border-b border-slate-200 pb-3">
+                <GlobeAltIcon className="h-5 w-5 text-indigo-500" />
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">
+                  SEO Meta 优化 (WordPress ACF)
+                </h3>
+              </div>
+              
+              <div className="space-y-4">
+                {/* SEO Title */}
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">SEO 标题</label>
+                  <input 
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                    value={aiResult.seo.seo_title || ''}
+                    onChange={(e) => setAiResult(prev => ({
+                      ...prev,
+                      seo: { ...prev.seo, seo_title: e.target.value }
+                    }))}
+                  />
+                </div>
+
+                {/* SEO Keywords */}
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">SEO 关键词</label>
+                  <input 
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
+                    value={aiResult.seo.seo_keywords || ''}
+                    onChange={(e) => setAiResult(prev => ({
+                      ...prev,
+                      seo: { ...prev.seo, seo_keywords: e.target.value }
+                    }))}
+                  />
+                </div>
+
+                {/* SEO Description */}
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">SEO 描述</label>
+                  <textarea 
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none"
+                    rows={2}
+                    value={aiResult.seo.seo_description || ''}
+                    onChange={(e) => setAiResult(prev => ({
+                      ...prev,
+                      seo: { ...prev.seo, seo_description: e.target.value }
+                    }))}
+                  />
+                </div>
               </div>
             </div>
           )}

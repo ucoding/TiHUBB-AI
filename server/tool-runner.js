@@ -188,11 +188,43 @@ export async function runTool(toolId, inputs) {
     }
   }
 
+  // --- 9. 新增：SEO Meta 提取逻辑 (针对 Brief 任务) ---
+  let seo = { seo_title: '', seo_keywords: '', seo_description: '' };
+  
+  // 仅在主任务是 brief 且非递归时执行
+  if (toolId === 'brief' && !inputs._isRecursive) {
+    try {
+      console.log(`[🚀 SEO Extract] 正在为简报生成 SEO Meta...`);
+      
+      const seoData = await runTool('brief_seo', {
+        question: inputs.question,
+        // 将生成的简报内容作为素材传给 SEO 提取工具
+        file: typeof parsedResult === 'string' ? parsedResult : JSON.stringify(parsedResult),
+        _isRecursive: true,
+        provider: providerType // 保持 Provider 一致性
+      });
+
+      // 确保提取到的结果符合 JSON 格式要求
+      if (seoData.result && typeof seoData.result === 'object') {
+        seo = {
+          seo_title: seoData.result.seo_title || '',
+          seo_keywords: seoData.result.seo_keywords || '',
+          seo_description: seoData.result.seo_description || ''
+        };
+      }
+      console.log(`[Success] SEO Meta 提取成功`);
+    } catch (err) {
+      console.error('SEO Meta 提取失败:', err.message);
+      // 失败时保持空对象，不阻塞主流程
+    }
+  }
+
   return {
     toolId,
     outputType: tool.outputType || 'text',
     result: parsedResult,
     keywords: keywords,
+    seo: seo,
     actualModel: actualModel // 标记实际使用的模型名称
   };
 }

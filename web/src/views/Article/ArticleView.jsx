@@ -11,21 +11,21 @@ const ArticleView = () => {
   const [loading, setLoading] = useState(false);
   const [progressText, setProgressText] = useState('');
   const [error, setError] = useState(null);
-  const [aiProvider, setAiProvider] = useState('gemini');
+  const [aiProvider, setAiProvider] = useState('ollama');
   const [currentSectionIndex, setCurrentSectionIndex] = useState(-1); // -1 表示尚未开始
 
   const modelConfigs = [
-    { 
-      id: 'gemini', 
-      label: 'Gemini 3.0', 
-      sub: '速度与智慧平衡', 
-      icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> 
-    },
     { 
       id: 'ollama', 
       label: 'Gemma 3 (Local)', 
       sub: '本地运行 / 私密', 
       icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg> 
+    },
+    { 
+      id: 'gemini', 
+      label: 'Gemini 3.0', 
+      sub: '速度与智慧平衡', 
+      icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> 
     }
   ];
 
@@ -185,7 +185,8 @@ const ArticleView = () => {
             question: section.heading,
             context: previousContext,
             // requirements: section.key_points.join('，')
-            requirements: `${section.key_points.join('，')}。要求：直接撰写正文内容，严禁在正文开头出现“第X章”、“第X节”或重复章节标题，保持深度长文的叙事感。`
+            requirements: `${section.key_points.join('，')}。要求：直接撰写正文内容，严禁在正文开头出现“第X章”、“第X节”或重复章节标题，保持深度长文的叙事感。`,
+            provider: aiProvider
           });
           
           const sectionMarkdown = `\n\n## ${section.heading}\n\n${res.result}\n\n`;

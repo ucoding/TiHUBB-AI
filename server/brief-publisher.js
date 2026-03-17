@@ -2,6 +2,11 @@
 import { pushBriefToWP } from './wp-client.js';
 
 export async function publishBrief(aiResult) {
+  const seoData = aiResult.seo || { 
+    seo_title: '', 
+    seo_keywords: '', 
+    seo_description: '' 
+  };
   return await pushBriefToWP({
     // 原生字段
     //title: `【${aiResult.platformLabel}简报】${aiResult.question}`,
@@ -12,21 +17,11 @@ export async function publishBrief(aiResult) {
     keywords: Array.isArray(aiResult.keywords) ? aiResult.keywords : [], // 确保 keywords 始终是一个数组，防止传递 undefined 导致 ensureTerms 报错
     acf: {
       brief_platform: aiResult.platform, // ← ACF field name    
+      seo_meta: { // 对应你创建的 Group 字段名
+        seo_title: seoData.seo_title || '',
+        seo_keywords: seoData.seo_keywords || '',
+        seo_description: seoData.seo_description || ''
+      }
     },
-
-    /*
-    ===============================
-    ACF / 自定义字段（第二阶段启用）
-    ===============================
-
-    fields: {
-      brief_platform: aiResult.platform,          // zhihu / xhs / x / linkedin
-      brief_question: aiResult.question,          // 原始问题
-      brief_tone: aiResult.tone,                  // 写作语气
-      brief_ai_source: 'local',                   // local / api
-      brief_model: aiResult.model,                // 使用模型
-      brief_prompt_version: aiResult.promptVersion
-    }
-    */
   });
 }
